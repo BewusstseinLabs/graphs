@@ -8,7 +8,7 @@ use crate::graph::{
 };
 
 #[test]
-fn test_directional_graph() -> Result<(), Error> {
+fn test_directed_graph() -> Result<(), Error> {
     let mut graph = DirectedGraph::new();
     graph.add_node( 0, "Node 0" )?;
     graph.add_node( 1, "Node 1" )?;
@@ -27,7 +27,7 @@ fn test_directional_graph() -> Result<(), Error> {
 }
 
 #[test]
-fn test_undirectional_graph() -> Result<(), Error> {
+fn test_undirected_graph() -> Result<(), Error> {
     let mut graph = UndirectedGraph::new();
     graph.add_node( 0, "Node 0" )?;
     graph.add_node( 1, "Node 1" )?;
@@ -39,9 +39,9 @@ fn test_undirectional_graph() -> Result<(), Error> {
     graph.add_edge( 2, 3, "Edge 2-3" )?;
     graph.generate_dot_to_file("undirected_graph.dot".to_string());
     println!("Depth First Search:");
-    graph.dfs( 0 );
+    graph.dfs( 3 );
     println!("Breadth First Search:");
-    graph.bfs( 0 );
+    graph.bfs( 3 );
     Ok( () )
 }
 

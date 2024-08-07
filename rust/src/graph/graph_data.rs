@@ -17,8 +17,8 @@ use std::{
 pub trait GraphDataTraits<I, N, E>
 where
     I: Clone + Ord + PartialEq,
-    N: PartialEq,
-    E: PartialEq,
+    N: Clone + PartialEq,
+    E: Clone + PartialEq,
 {
     fn new() -> Self;
     fn add_node(&mut self, node: I, data: N) -> Result<(), Error>;
@@ -29,7 +29,8 @@ where
     fn contains_node(&self, node: I) -> bool;
     fn remove_node(&mut self, node: I) -> Result<N, Error>;
     fn delete_node(&mut self, node: I) -> Result<(), Error>;
-    fn add_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error>;
+    fn add_undirected_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error>;
+    fn add_directed_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error>;
     fn get_edge(&self, node1: I, node2: I) -> Option<&E>;
     fn get_edge_mut(&mut self, node1: I, node2: I) -> Option<&mut E>;
     fn get_edges(&self, node: I) -> Option<&AdjacencyData<I, E>>;
@@ -39,8 +40,8 @@ where
     fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error>;
     fn clear( &mut self );
     fn clear_edges( &mut self );
-    fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>);
-    fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>);
+    fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> Option<I>;
+    fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> Option<I>;
     fn is_complete( graph: &Self ) -> bool;
     fn is_empty( graph: &Self ) -> bool;
     fn is_trivial( graph: &Self ) -> bool;
@@ -65,8 +66,8 @@ pub struct GraphData<I, N, E> {
 impl<I, N, E> GraphDataTraits<I, N, E> for GraphData<I, N, E>
 where
     I: Clone + Ord + PartialEq,
-    N: PartialEq,
-    E: PartialEq,
+    N: Clone + PartialEq,
+    E: Clone + PartialEq,
 {
     fn new() -> Self {
         Self { data: BTreeMap::new() }
@@ -115,16 +116,35 @@ where
         Ok(())
     }
 
-    fn add_edge(&mut self, id1: I, id2: I, data: E) -> Result<(), Error> {
-        if let Some(id) = self.data.get_mut(&id1) {
-            if id.0.contains_key(&id2) {
+    fn add_undirected_edge(&mut self, id1: I, id2: I, data: E) -> Result<(), Error> {
+        if let Some(node1) = self.data.get_mut(&id1) {
+            if node1.0.contains_key(&id2) {
                 return Err(Error::EdgeAlreadyExists);
             }
-            id.0.insert(id2, data);
-            Ok(())
+            node1.0.insert(id2.clone(), data.clone());
         } else {
-            Err(Error::NodeNotFound)
+            return Err(Error::NodeNotFound);
         }
+        if let Some(node2) = self.data.get_mut(&id2) {
+            if node2.0.contains_key(&id1) {
+                return Err(Error::EdgeAlreadyExists);
+            }
+            node2.0.insert(id1, data);
+        } else {
+            return Err(Error::NodeNotFound);
+        }
+        Ok(())
+    }
+
+    fn add_directed_edge(&mut self, id1: I, id2: I, data: E) -> Result<(), Error> {
+        if let Some(node1) = self.data.get_mut(&id1) {
+            if node1.0.contains_key(&id2) {
+                return Err(Error::EdgeAlreadyExists);
+            }
+            node1.0.insert(id2.clone(), data.clone());
+            return Ok(());
+        }
+        Err(Error::NodeNotFound)
     }
 
     fn get_edge(&self, id1: I, id2: I) -> Option<&E> {
@@ -180,12 +200,12 @@ where
         }
     }
 
-    fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>) {
-        let mut edge: (Option<I>, Option<I>) = (None, None);
+    fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> Option<I> {
+        let mut current: Option<I> = None;
         if let Some( current_id ) = queue.pop_front() {
-            edge.0 = Some( current_id.clone() );
             if !visited.contains( &current_id ) {
                 visited.insert( current_id.clone() );
+                current = Some( current_id.clone() );
                 if let Some( ( current_adjacencies, _ ) ) = self.data.get( &current_id ) {
                     for ( next_id, _ ) in current_adjacencies {
                         if !visited.contains( next_id ) {
@@ -194,19 +214,16 @@ where
                     }
                 }
             }
-        } else {
-            edge = (None, None);
         }
-        edge.1 = queue.front().cloned();
-        edge
+        current
     }
 
-    fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>) {
-        let mut edge: (Option<I>, Option<I>) = (None, None);
+    fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> Option<I> {
+        let mut current: Option<I> = None;
         if let Some( current_id ) = stack.pop() {
-            edge.0 = Some( current_id.clone() );
             if !visited.contains( &current_id ) {
                 visited.insert( current_id.clone() );
+                current = Some( current_id.clone() );
                 if let Some( ( current_adjacencies, _ ) ) = self.data.get_mut( &current_id ) {
                     for ( next_id, _ ) in current_adjacencies.iter_mut() {
                         if !visited.contains( next_id ) {
@@ -215,12 +232,8 @@ where
                     }
                 }
             }
-        } else {
-            edge = (None, None);
         }
-        edge.1 = stack.last().cloned();
-        edge
-
+        current
     }
 
     fn is_complete( graph: &Self ) -> bool {

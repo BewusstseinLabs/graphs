@@ -15,8 +15,8 @@ pub struct UndirectedGraph<I, N, E> {
 impl<I, N, E> UndirectedGraph<I, N, E>
 where
     I: Clone + Ord + PartialEq + Display,
-    N: PartialEq + Display,
-    E: PartialEq + Display,
+    N: Clone + PartialEq + Display,
+    E: Clone + PartialEq + Display,
 {
     pub fn generate_dot_to_file(&self, file_name: String) {
         let mut dot = String::new();
@@ -35,8 +35,8 @@ where
 impl<I, N, E> GraphTraits<I, N, E> for UndirectedGraph<I, N, E>
 where
     I: Clone + Ord + PartialEq + Display,
-    N: PartialEq + Display,
-    E: PartialEq + Display,
+    N: Clone + PartialEq + Display,
+    E: Clone + PartialEq + Display,
 {
     fn new() -> Self {
         Self {
@@ -71,7 +71,7 @@ where
     }
 
     fn add_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error> {
-        self.data.add_edge(node1, node2, data)?;
+        self.data.add_undirected_edge(node1, node2, data)?;
         Ok( () )
     }
 
@@ -92,7 +92,7 @@ where
     }
 
     fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error> {
-        self.data.remove_edge(node1, node2)?;
+        self.data.delete_edge(node1, node2)?;
         Ok( () )
     }
 
@@ -108,8 +108,8 @@ where
         let mut visited = BTreeSet::new();
         queue.push_back(start.clone());
         while !queue.is_empty() {
-            if let ( Some( current_id ), Some( next_id ) ) = self.data.bfs_step(&mut queue, &mut visited) {
-                println!("Current: {} -> Next: {}", current_id, next_id);
+            if let Some( current_id ) = self.data.bfs_step(&mut queue, &mut visited) {
+                println!("Visited: {}", current_id);
             }
         }
     }
@@ -119,8 +119,8 @@ where
         let mut visited = BTreeSet::new();
         stack.push(start.clone());
         while !stack.is_empty() {
-            if let ( Some( current_id ), Some( next_id ) ) = self.data.dfs_step(&mut stack, &mut visited) {
-                println!("Current: {} -> Next: {}", current_id, next_id);
+            if let Some( current_id ) = self.data.dfs_step(&mut stack, &mut visited) {
+                println!("Visited: {}", current_id);
             }
         }
     }

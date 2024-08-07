@@ -1,42 +1,72 @@
+pub mod error;
+
+use self::error::Error;
+
 use crate::graph::{
-    error::Error,
     GraphTraits,
     graph_data::{ GraphData, GraphDataTraits }
 };
 
 //: Standard
-use std::collections::{ BTreeSet, VecDeque };
+use std::collections::{ BTreeSet, BTreeMap, VecDeque };
 use std::fmt::Display;
+use std::sync::{Arc, Mutex};
 
-pub struct FunctionGraph<I, N, F> {
-    data: GraphData<I, N, F>,
+pub trait FunctionNodeTraits<In, Out>
+where
+    In: Clone + Ord + PartialEq + Display,
+    Out: Clone + Ord + PartialEq + Display,
+{
+    fn execute( &mut self ) -> Result<(), Error>;
 }
 
-impl<I, N, E> FunctionGraph<I, N, E>
+#[derive(Clone)]
+pub struct FunctionNode<In, Out> {
+    input: Arc<Mutex<In>>,
+    function: Arc<Mutex<dyn Fn(&In, &Out)>>,
+    output: Arc<Mutex<Out>>,
+}
+
+impl<In, Out> FunctionNode<In, Out>
 where
-    I: Clone + Ord + PartialEq + Display,
-    N: PartialEq + Display,
-    E: PartialEq,
+    In: Clone + Ord + PartialEq + Display,
+    Out: Clone + Ord + PartialEq + Display,
 {
-    pub fn generate_dot_to_file(&self, file_name: String) {
-        let mut dot = String::new();
-        dot.push_str("digraph G {\n");
-        for (node1, (adjacencies, data)) in self.data.get_nodes() {
-            dot.push_str(&format!(" {} [label=\"{}\"];\n", node1, data));
-            for (node2, _) in adjacencies {
-                dot.push_str(&format!(" {} -> {} [label=\"fn\"];\n", node1, node2));
-            }
+    pub fn new(input: In, function: Arc<Mutex<dyn Fn(&In, &Out)>>, output: Out) -> Self {
+        Self {
+            input,
+            function,
+            output,
         }
-        dot.push_str("}\n");
-        std::fs::write(file_name, dot).unwrap();
     }
 }
 
-impl<I, N, F> GraphTraits<I, N, F> for FunctionGraph<I, N, F>
+impl<In, Out> FunctionNodeTraits<In, Out> for FunctionNode<In, Out>
+where
+    In: Clone + Ord + PartialEq + Display,
+    Out: Clone + Ord + PartialEq + Display,
+{
+    fn execute( &mut self ) -> Result<(), Error> {
+        match self.function.lock() {
+            Ok( function ) => {
+                function(&self.input, &self.output);
+            }
+            Err( _ ) => return Err( Error::ExecutionError ),
+        };
+        Ok(())
+    }
+}
+
+pub struct FunctionGraph<I, In, Out> {
+    data: GraphData<I, FunctionNode<In, Out>, ()>,
+}
+
+impl<I, N: FunctionNodeTraits<In, Out>, In, Out> GraphTraits<I, N, ()> for FunctionGraph<I, In, Out>
 where
     I: Clone + Ord + PartialEq + Display,
-    N: PartialEq + Default,
-    F: PartialEq + Fn(&N, &N) -> N,
+    N: Clone + PartialEq + Default,
+    In: Clone + Ord + PartialEq + Display,
+    Out: Clone + Ord + PartialEq + Display,
 {
     fn new() -> Self {
         Self {
@@ -71,18 +101,15 @@ where
     }
 
     fn add_edge(&mut self, node1: I, node2: I, data: F) -> Result<(), Error> {
-        if self.data.contains_edge(node1.clone(), node2.clone()) {
-            return Err(Error::EdgeAlreadyExists);
-        }
-        self.data.add_edge(node1, node2, data)?;
+        self.data.add_directed_edge(node1, node2, data)?;
         Ok( () )
     }
 
-    fn get_edge(&self, node1: I, node2: I) -> Option<&F> {
+    fn get_edge(&self, node1: I, node2: I) -> Option<&()> {
         self.data.get_edge(node1, node2)
     }
 
-    fn get_edge_mut(&mut self, node1: I, node2: I) -> Option<&mut F> {
+    fn get_edge_mut(&mut self, node1: I, node2: I) -> Option<&mut ()> {
         self.data.get_edge_mut(node1, node2)
     }
 
@@ -90,12 +117,12 @@ where
         self.data.contains_edge(node1, node2)
     }
 
-    fn remove_edge(&mut self, node1: I, node2: I) -> Result<F, Error> {
+    fn remove_edge(&mut self, node1: I, node2: I) -> Result<(), Error> {
         self.data.remove_edge(node1, node2)
     }
 
     fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error> {
-        self.data.remove_edge(node1, node2)?;
+        self.data.delete_edge(node1, node2)?;
         Ok( () )
     }
 
@@ -111,17 +138,8 @@ where
         let mut visited = BTreeSet::new();
         queue.push_back(start.clone());
         while !queue.is_empty() {
-            if let ( Some( current_id ), Some( next_id ) ) = self.data.bfs_step(&mut queue, &mut visited) {
-                let mut result = N::default();
-                if let Some( edge_data ) = self.data.get_edge( current_id.clone(), next_id.clone() ) {
-                    if let Some( current_data ) = self.data.get_node( current_id.clone() ) {
-                        result = edge_data( current_data, &N::default() );
-                        println!("Current: {} -> Next: {}", current_id, next_id);
-                    }
-                }
-                if let Some( current_data ) = self.data.get_node_mut( current_id ) {
-                    *current_data = result;
-                }
+            if let Some( current_id ) = self.data.bfs_step(&mut queue, &mut visited) {
+                println!("Visited: {}", current_id);
             }
         }
     }
@@ -131,17 +149,8 @@ where
         let mut visited = BTreeSet::new();
         stack.push(start.clone());
         while !stack.is_empty() {
-            if let ( Some( current_id ), Some( next_id ) ) = self.data.dfs_step(&mut stack, &mut visited) {
-                let mut result = N::default();
-                if let Some( edge_data ) = self.data.get_edge( current_id.clone(), next_id.clone() ) {
-                    if let Some( current_data ) = self.data.get_node( current_id.clone() ) {
-                        result = edge_data( current_data, &N::default() );
-                        println!("Current: {} -> Next: {}", current_id, next_id);
-                    }
-                }
-                if let Some( current_data ) = self.data.get_node_mut( current_id ) {
-                    *current_data = result;
-                }
+            if let Some( current_id ) = self.data.dfs_step(&mut stack, &mut visited) {
+                println!("Visited: {}", current_id);
             }
         }
     }
