@@ -14,9 +14,9 @@ pub struct DirectedGraph<I, N, E> {
 
 impl<I, N, E> DirectedGraph<I, N, E>
 where
-    I: Clone + Ord + Display,
-    N: Display,
-    E: Display,
+    I: Clone + Ord + PartialEq + Display,
+    N: PartialEq + Display,
+    E: PartialEq + Display,
 {
     pub fn generate_dot_to_file(&self, file_name: String) {
         let mut dot = String::new();
@@ -34,9 +34,9 @@ where
 
 impl<I, N, E> GraphTraits<I, N, E> for DirectedGraph<I, N, E>
 where
-    I: Clone + Ord + Display,
-    N: Display,
-    E: Display,
+    I: Clone + Ord + PartialEq + Display,
+    N: PartialEq + Display,
+    E: PartialEq + Display,
 {
     fn new() -> Self {
         Self {
@@ -99,6 +99,13 @@ where
         Ok( () )
     }
 
+    fn clear( &mut self ) {
+        self.data.clear();
+    }
+    fn clear_edges( &mut self ) {
+        self.data.clear_edges();
+    }
+
     fn bfs(&mut self, start: I) {
         let mut queue = VecDeque::new();
         let mut visited = BTreeSet::new();
@@ -119,5 +126,57 @@ where
                 println!("Current: {} -> Next: {}", current_id, next_id);
             }
         }
+    }
+
+    fn is_complete( graph: &Self ) -> bool {
+        GraphDataTraits::is_complete(&graph.data)
+    }
+
+    fn is_empty( graph: &Self ) -> bool {
+        GraphDataTraits::is_empty(&graph.data)
+    }
+
+    fn is_trivial( graph: &Self ) -> bool {
+        GraphDataTraits::is_trivial(&graph.data)
+    }
+
+    fn is_null( graph: &Self ) -> bool {
+        GraphDataTraits::is_null(&graph.data)
+    }
+
+    fn is_child_node( graph: &Self, node_1: I ) -> bool {
+        GraphDataTraits::is_child_node(&graph.data, node_1)
+    }
+
+    fn is_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        GraphDataTraits::is_subgraph(&graph.data, &subgraph.data)
+    }
+
+    fn is_proper_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        GraphDataTraits::is_proper_subgraph(&graph.data, &subgraph.data)
+    }
+
+    fn is_improper_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        GraphDataTraits::is_improper_subgraph(&graph.data, &subgraph.data)
+    }
+
+    fn is_spanning_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        GraphDataTraits::is_spanning_subgraph(&graph.data, &subgraph.data)
+    }
+
+    fn are_adjacent_nodes( graph: &Self, node_1: I, node_2: I ) -> bool {
+        GraphDataTraits::are_adjacent_nodes(&graph.data, node_1, node_2)
+    }
+
+    fn are_adjacent_edges( graph: &Self, node_1: I, node_2: I, node_3: I ) -> bool {
+        GraphDataTraits::are_adjacent_edges(&graph.data, node_1, node_2, node_3)
+    }
+
+    fn order( graph: &Self ) -> usize {
+        GraphDataTraits::order(&graph.data)
+    }
+
+    fn size( graph: &Self ) -> usize {
+        GraphDataTraits::size(&graph.data)
     }
 }

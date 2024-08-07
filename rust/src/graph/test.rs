@@ -1,9 +1,10 @@
 use crate::graph::{
+    self,
     error::Error,
     GraphTraits,
-    undirected_graph::UndirectedGraph,
-    directed_graph::DirectedGraph,
-    function_graph::FunctionGraph
+    UndirectedGraph,
+    DirectedGraph,
+    FunctionGraph
 };
 
 #[test]
@@ -56,17 +57,20 @@ fn test_functional_graph() -> Result<(), Error> {
     graph.add_edge( 1, 3, | input: &f32, output: &f32 | -> f32 { *input + *output } )?;
     graph.add_edge( 2, 3, | input: &f32, output: &f32 | -> f32 { *input + *output } )?;
 
+    println!("Is Complete: {}", GraphTraits::is_complete( &graph ) );
+    println!("Is Empty: {}", GraphTraits::is_empty( &graph ) );
+
     println!("Before:");
     println!("Node 0: {}", graph.get_node( 0 ).unwrap());
     println!("Node 1: {}", graph.get_node( 1 ).unwrap());
     println!("Node 2: {}", graph.get_node( 2 ).unwrap());
     println!("Node 3: {}", graph.get_node( 3 ).unwrap());
 
-    graph.generate_dot_to_file("function_graph_before.dot".to_string());
+    //graph.generate_dot_to_file("function_graph_before.dot".to_string());
 
     graph.bfs( 0 );
 
-    graph.generate_dot_to_file("function_graph_after.dot".to_string());
+    //graph.generate_dot_to_file("function_graph_after.dot".to_string());
 
     println!("Before:");
     println!("Node 0: {}", graph.get_node( 0 ).unwrap());

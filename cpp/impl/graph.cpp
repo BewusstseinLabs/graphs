@@ -285,7 +285,8 @@ namespace atom {
             return true;
         }
 
-        template<typename T> bool is_proper_subgraph( const Graph<T>& graph, const Graph<T>& subgraph ) {
+        template<typename T>
+        bool is_proper_subgraph( const Graph<T>& graph, const Graph<T>& subgraph ) {
             if ( graph == subgraph ) {
                 return false;
             }
@@ -295,11 +296,13 @@ namespace atom {
             return false;
         }
 
-        template<typename T> bool is_improper_subgraph( const Graph<T>& graph, const Graph<T>& subgraph ) {
+        template<typename T>
+        bool is_improper_subgraph( const Graph<T>& graph, const Graph<T>& subgraph ) {
             return graph.adjacencies == subgraph.adjacencies;
         }
 
-        template<typename T> bool is_spanning_subgraph( const Graph<T>& graph, const Graph<T>& subgraph ) {
+        template<typename T>
+        bool is_spanning_subgraph( const Graph<T>& graph, const Graph<T>& subgraph ) {
             if ( graph.adjacencies.size() != subgraph.adjacencies.size() ) {
                 return false;
             }

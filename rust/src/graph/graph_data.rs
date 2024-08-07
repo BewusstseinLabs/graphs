@@ -1,11 +1,24 @@
 use crate::graph::error::Error;
 
 //: Standard
-use std::collections::{ BTreeSet, BTreeMap, VecDeque };
+use std::{
+    collections::{ BTreeSet, BTreeMap, VecDeque },
+    ops::{
+        Add, AddAssign,
+        Sub, SubAssign,
+    },
+    cmp::{
+        Eq, PartialEq,
+        Ord
+    },
+    fmt::Display
+};
 
 pub trait GraphDataTraits<I, N, E>
 where
-    I: Clone + Ord,
+    I: Clone + Ord + PartialEq,
+    N: PartialEq,
+    E: PartialEq,
 {
     fn new() -> Self;
     fn add_node(&mut self, node: I, data: N) -> Result<(), Error>;
@@ -24,8 +37,23 @@ where
     fn contains_edge(&self, node1: I, node2: I) -> bool;
     fn remove_edge(&mut self, node1: I, node2: I) -> Result<E, Error>;
     fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error>;
+    fn clear( &mut self );
+    fn clear_edges( &mut self );
     fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>);
     fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>);
+    fn is_complete( graph: &Self ) -> bool;
+    fn is_empty( graph: &Self ) -> bool;
+    fn is_trivial( graph: &Self ) -> bool;
+    fn is_null( graph: &Self ) -> bool;
+    fn is_child_node( graph: &Self, node_1: I ) -> bool;
+    fn is_subgraph( graph: &Self, subgraph: &Self ) -> bool;
+    fn is_proper_subgraph( graph: &Self, subgraph: &Self ) -> bool;
+    fn is_improper_subgraph( graph: &Self, subgraph: &Self ) -> bool;
+    fn is_spanning_subgraph( graph: &Self, subgraph: &Self ) -> bool;
+    fn are_adjacent_nodes( graph: &Self, node_1: I, node_2: I ) -> bool;
+    fn are_adjacent_edges( graph: &Self, node_1: I, node_2: I, node_3: I ) -> bool;
+    fn order( graph: &Self ) -> usize;
+    fn size( graph: &Self ) -> usize;
 }
 
 pub type AdjacencyData<I, E> = BTreeMap<I, E>;
@@ -36,7 +64,9 @@ pub struct GraphData<I, N, E> {
 
 impl<I, N, E> GraphDataTraits<I, N, E> for GraphData<I, N, E>
 where
-    I: Clone + Ord,
+    I: Clone + Ord + PartialEq,
+    N: PartialEq,
+    E: PartialEq,
 {
     fn new() -> Self {
         Self { data: BTreeMap::new() }
@@ -140,6 +170,16 @@ where
         }
     }
 
+    fn clear(&mut self) {
+        self.data.clear();
+    }
+
+    fn clear_edges(&mut self) {
+        for (_, node) in self.data.iter_mut() {
+            node.0.clear();
+        }
+    }
+
     fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> (Option<I>, Option<I>) {
         let mut edge: (Option<I>, Option<I>) = (None, None);
         if let Some( current_id ) = queue.pop_front() {
@@ -181,5 +221,129 @@ where
         edge.1 = stack.last().cloned();
         edge
 
+    }
+
+    fn is_complete( graph: &Self ) -> bool {
+        for ( node, neighbors ) in &graph.data {
+            if neighbors.0.len() != graph.data.len() - 1 {
+                return false;
+            }
+            for neighbor in neighbors.0.keys() {
+                if !graph.data.get( neighbor ).unwrap().0.contains_key( node ) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    fn is_empty( graph: &Self ) -> bool {
+        if graph.data.is_empty() {
+            return true;
+        }
+        for ( _, neighbors ) in &graph.data {
+            if !neighbors.0.is_empty() {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn is_trivial( graph: &Self ) -> bool {
+        if graph.data.len() == 1 {
+            for ( _, neighbors ) in &graph.data {
+                if neighbors.0.is_empty() {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn is_null( graph: &Self ) -> bool {
+        if graph.data.is_empty() {
+            return true;
+        }
+        false
+    }
+
+    fn is_child_node( graph: &Self, node_1: I ) -> bool {
+        if graph.data.contains_key( &node_1 ) {
+            return true;
+        }
+        false
+    }
+
+    fn is_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        for ( node, neighbors ) in &subgraph.data {
+            if !graph.data.contains_key( node ) {
+                return false;
+            }
+            else if !graph.data.get( node ).unwrap().0.keys().all( |key| neighbors.0.contains_key( key ) ) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn is_proper_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        if graph.data != subgraph.data {
+            if Self::is_subgraph( graph, subgraph ) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn is_improper_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        if graph.data != subgraph.data {
+            return false;
+        }
+        true
+    }
+
+    fn is_spanning_subgraph( graph: &Self, subgraph: &Self ) -> bool {
+        if graph.data.len() != subgraph.data.len() {
+            return false;
+        }
+        else if Self::is_subgraph( graph, subgraph ) {
+            return true;
+        }
+        false
+    }
+
+    fn are_adjacent_nodes( graph: &Self, node_1: I, node_2: I ) -> bool {
+        if !Self::is_child_node( graph, node_1.clone() ) {
+            return false;
+        }
+        if !Self::is_child_node( graph, node_2.clone() ) {
+            return false;
+        }
+        if !graph.data.get( &node_1 ).unwrap().0.contains_key( &node_2 ) {
+            return false;
+        }
+        true
+    }
+
+    fn are_adjacent_edges( graph: &Self, node_1: I, node_2: I, node_3: I ) -> bool {
+        if !Self::are_adjacent_nodes( graph, node_1, node_2.clone() ) {
+            return false;
+        }
+        if !Self::are_adjacent_nodes( graph, node_2, node_3 ) {
+            return false;
+        }
+        true
+    }
+
+    fn order( graph: &Self ) -> usize {
+        graph.data.len()
+    }
+
+    fn size( graph: &Self ) -> usize {
+        let mut size = 0;
+        for ( _, neighbors ) in &graph.data {
+            size += neighbors.0.len();
+        }
+        size / 2
     }
 }
