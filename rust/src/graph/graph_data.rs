@@ -1,4 +1,6 @@
-use crate::graph::error::Error;
+pub mod error;
+
+use self::error::Error;
 
 //: Standard
 use std::{

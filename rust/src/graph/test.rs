@@ -1,10 +1,12 @@
+use std::sync::{Arc, Mutex};
+
 use crate::graph::{
     self,
-    error::Error,
+    graph_data::error::Error,
     GraphTraits,
-    UndirectedGraph,
-    DirectedGraph,
-    FunctionGraph
+    undirected_graph::UndirectedGraph,
+    directed_graph::DirectedGraph,
+    function_graph::{ FunctionGraph, FunctionNode, error::Error as FunctionGraphError }
 };
 
 #[test]
@@ -46,37 +48,33 @@ fn test_undirected_graph() -> Result<(), Error> {
 }
 
 #[test]
-fn test_functional_graph() -> Result<(), Error> {
-    let mut graph = FunctionGraph::<i32, f32, fn( a: &f32, b: &f32) -> f32>::new();
-    graph.add_node( 0, 0.1 )?;
-    graph.add_node( 1, 0.2 )?;
-    graph.add_node( 2, 0.2 )?;
-    graph.add_node( 3, 0.0 )?;
-    graph.add_edge( 0, 1, | input: &f32, output: &f32 | -> f32 { *input + *output } )?;
-    graph.add_edge( 0, 2, | input: &f32, output: &f32 | -> f32 { *input + *output } )?;
-    graph.add_edge( 1, 3, | input: &f32, output: &f32 | -> f32 { *input + *output } )?;
-    graph.add_edge( 2, 3, | input: &f32, output: &f32 | -> f32 { *input + *output } )?;
+fn test_functional_graph() -> Result<(), FunctionGraphError> {
+    let mut graph = FunctionGraph::new();
+    let var0 = Arc::new( Mutex::new( 1 ) );
+    let var1 = Arc::new( Mutex::new( 2 ) );
+    let var2 = Arc::new( Mutex::new( 2 ) );
+    let var3 = Arc::new( Mutex::new( 0 ) );
 
-    println!("Is Complete: {}", GraphTraits::is_complete( &graph ) );
-    println!("Is Empty: {}", GraphTraits::is_empty( &graph ) );
+    graph.add_node( 0, FunctionNode::new( var0.clone(), Box::new( | input: &i32, output: &mut i32 | *output += *input ), var1.clone() ) )?;
+    graph.add_node( 1, FunctionNode::new( var0.clone(), Box::new( | input: &i32, output: &mut i32 | *output += *input ), var2.clone() ) )?;
+    graph.add_node( 2, FunctionNode::new( var1.clone(), Box::new( | input: &i32, output: &mut i32 | *output += *input ), var3.clone() ) )?;
+    graph.add_node( 3, FunctionNode::new( var2.clone(), Box::new( | input: &i32, output: &mut i32 | *output += *input ), var3.clone() ) )?;
+    graph.add_edge( 0, 1, () )?;
+    graph.add_edge( 0, 2, () )?;
+    graph.add_edge( 1, 3, () )?;
+    graph.add_edge( 2, 3, () )?;
 
-    println!("Before:");
-    println!("Node 0: {}", graph.get_node( 0 ).unwrap());
-    println!("Node 1: {}", graph.get_node( 1 ).unwrap());
-    println!("Node 2: {}", graph.get_node( 2 ).unwrap());
-    println!("Node 3: {}", graph.get_node( 3 ).unwrap());
-
-    //graph.generate_dot_to_file("function_graph_before.dot".to_string());
+    println!("Var 0: {}", var0.lock().unwrap() );
+    println!("Var 1: {}", var1.lock().unwrap() );
+    println!("Var 2: {}", var2.lock().unwrap() );
+    println!("Var 3: {}", var3.lock().unwrap() );
 
     graph.bfs( 0 );
 
-    //graph.generate_dot_to_file("function_graph_after.dot".to_string());
-
-    println!("Before:");
-    println!("Node 0: {}", graph.get_node( 0 ).unwrap());
-    println!("Node 1: {}", graph.get_node( 1 ).unwrap());
-    println!("Node 2: {}", graph.get_node( 2 ).unwrap());
-    println!("Node 3: {}", graph.get_node( 3 ).unwrap());
+    println!("Var 0: {}", var0.lock().unwrap() );
+    println!("Var 1: {}", var1.lock().unwrap() );
+    println!("Var 2: {}", var2.lock().unwrap() );
+    println!("Var 3: {}", var3.lock().unwrap() );
 
     Ok( () )
 }

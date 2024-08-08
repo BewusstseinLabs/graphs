@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+pub trait GraphErrorTraits: std::fmt::Debug + std::fmt::Display {}
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Graph Error: Node Not Found")]
@@ -11,3 +13,5 @@ pub enum Error {
     #[error("Graph Error: Edge Already Exists")]
     EdgeAlreadyExists,
 }
+
+impl GraphErrorTraits for Error {}

@@ -1,5 +1,5 @@
 use crate::graph::{
-    error::Error,
+    graph_data::error::Error,
     GraphTraits,
     graph_data::{ GraphData, GraphDataTraits }
 };
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<I, N, E> GraphTraits<I, N, E> for DirectedGraph<I, N, E>
+impl<I, N, E> GraphTraits<I, N, E, Error> for DirectedGraph<I, N, E>
 where
     I: Clone + Ord + PartialEq + Display,
     N: Clone + PartialEq + Display,
@@ -45,8 +45,7 @@ where
     }
 
     fn add_node(&mut self, node: I, data: N) -> Result<(), Error> {
-        self.data.add_node(node, data)?;
-        Ok( () )
+        self.data.add_node(node, data)
     }
 
     fn get_node(&self, node: I) -> Option<&N> {
@@ -66,13 +65,11 @@ where
     }
 
     fn delete_node(&mut self, node: I) -> Result<(), Error> {
-        self.data.remove_node(node)?;
-        Ok( () )
+        self.data.delete_node(node)
     }
 
     fn add_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error> {
-        self.data.add_directed_edge(node1, node2, data)?;
-        Ok( () )
+        self.data.add_directed_edge(node1, node2, data)
     }
 
     fn get_edge(&self, node1: I, node2: I) -> Option<&E> {
@@ -92,13 +89,13 @@ where
     }
 
     fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error> {
-        self.data.delete_edge(node1, node2)?;
-        Ok( () )
+        self.data.delete_edge(node1, node2)
     }
 
     fn clear( &mut self ) {
         self.data.clear();
     }
+
     fn clear_edges( &mut self ) {
         self.data.clear_edges();
     }
