@@ -1,3 +1,5 @@
+// Copyright 2024 Bewusstsein Labs
+
 use crate::graph::{
     graph_data::error::Error,
     GraphTraits,

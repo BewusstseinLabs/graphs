@@ -1,3 +1,5 @@
+// Copyright 2024 Bewusstsein Labs
+
 use std::sync::{Arc, Mutex};
 
 use crate::graph::{

@@ -1,4 +1,4 @@
-# AtomuAI - Graphs
+# Bewusstsein Labs - Graphs
 
 ## Introduction
 - This is a library dedicated to graph based data structures and algorithms.
@@ -45,3 +45,5 @@
 ## Graph Traversal
 - Breadth First Search ***Functional***
 - Depth First Search ***Functional***
+
+### Copyright © 2024 Bewusstsein Labs

@@ -1,3 +1,5 @@
+// Copyright 2024 Bewusstsein Labs
+
 use thiserror::Error;
 
 pub trait GraphErrorTraits: std::fmt::Debug + std::fmt::Display {}

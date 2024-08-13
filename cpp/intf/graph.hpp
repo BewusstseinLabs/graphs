@@ -1,4 +1,4 @@
-// Copyright 2024 Shane W. Mulcahy
+// Copyright 2024 Bewusstsein Labs
 
 #ifndef GRAPHS_INTF_GRAPH_HPP_
 #define GRAPHS_INTF_GRAPH_HPP_
@@ -9,7 +9,7 @@
 #include <map>
 #include <fstream>
 
-namespace atom {
+namespace bewusstsein {
 
     namespace graph {
 
@@ -104,6 +104,6 @@ namespace atom {
 
     } // namespace graph
 
-} // namespace atom
+} // namespace bewusstsein
 
 #endif // GRAPHS_INTF_GRAPH_HPP_

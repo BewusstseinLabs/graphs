@@ -1,3 +1,5 @@
+// Copyright 2024 Bewusstsein Labs
+
 mod graph_data;
 pub mod undirected_graph;
 pub mod directed_graph;

@@ -1,4 +1,4 @@
-// Copyright 2024 Shane W. Mulcahy
+// Copyright 2024 Bewusstsein Labs
 
 #include <iostream>
 #include <vector>
@@ -8,7 +8,7 @@
 
 #include "intf/graph.hpp"
 
-namespace atom {
+namespace bewusstsein {
 
     namespace graph {
 
@@ -415,4 +415,4 @@ namespace atom {
 
     } // namespace graph
 
-} // namespace atom
+} // namespace bewusstsein
