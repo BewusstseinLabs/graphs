@@ -25,27 +25,27 @@ where
     E: Clone + PartialEq,
 {
     fn new() -> Self;
-    fn add_node(&mut self, node: I, data: N) -> Result<(), Error>;
-    fn get_node(&self, node: I) -> Option<&N>;
-    fn get_node_mut(&mut self, node: I) -> Option<&mut N>;
-    fn get_nodes(&self) -> &BTreeMap<I, NodeData<I, N, E>>;
-    fn get_nodes_mut(&mut self) -> &mut BTreeMap<I, NodeData<I, N, E>>;
-    fn contains_node(&self, node: I) -> bool;
-    fn remove_node(&mut self, node: I) -> Result<N, Error>;
-    fn delete_node(&mut self, node: I) -> Result<(), Error>;
-    fn add_undirected_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error>;
-    fn add_directed_edge(&mut self, node1: I, node2: I, data: E) -> Result<(), Error>;
-    fn get_edge(&self, node1: I, node2: I) -> Option<&E>;
-    fn get_edge_mut(&mut self, node1: I, node2: I) -> Option<&mut E>;
-    fn get_edges(&self, node: I) -> Option<&AdjacencyData<I, E>>;
-    fn get_edges_mut(&mut self, node: I) -> Option<&mut AdjacencyData<I, E>>;
-    fn contains_edge(&self, node1: I, node2: I) -> bool;
-    fn remove_edge(&mut self, node1: I, node2: I) -> Result<E, Error>;
-    fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error>;
+    fn add_node( &mut self, node: I, data: N ) -> Result<(), Error>;
+    fn get_node( &self, node: I ) -> Option<&N>;
+    fn get_node_mut( &mut self, node: I ) -> Option<&mut N>;
+    fn get_nodes( &self ) -> &BTreeMap<I, NodeData<I, N, E>>;
+    fn get_nodes_mut( &mut self ) -> &mut BTreeMap<I, NodeData<I, N, E>>;
+    fn contains_node( &self, node: I ) -> bool;
+    fn remove_node( &mut self, node: I ) -> Result<N, Error>;
+    fn delete_node( &mut self, node: I ) -> Result<(), Error>;
+    fn add_undirected_edge( &mut self, node1: I, node2: I, data: E ) -> Result<(), Error>;
+    fn add_directed_edge( &mut self, node1: I, node2: I, data: E ) -> Result<(), Error>;
+    fn get_edge( &self, node1: I, node2: I ) -> Option<&E>;
+    fn get_edge_mut( &mut self, node1: I, node2: I ) -> Option<&mut E>;
+    fn get_edges( &self, node: I ) -> Option<&AdjacencyData<I, E>>;
+    fn get_edges_mut( &mut self, node: I ) -> Option<&mut AdjacencyData<I, E>>;
+    fn contains_edge( &self, node1: I, node2: I ) -> bool;
+    fn remove_edge( &mut self, node1: I, node2: I ) -> Result<E, Error>;
+    fn delete_edge( &mut self, node1: I, node2: I ) -> Result<(), Error>;
     fn clear( &mut self );
     fn clear_edges( &mut self );
-    fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> Option<I>;
-    fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> Option<I>;
+    fn bfs_step( &mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I> ) -> Option<I>;
+    fn dfs_step( &mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I> ) -> Option<I>;
     fn is_complete( graph: &Self ) -> bool;
     fn is_empty( graph: &Self ) -> bool;
     fn is_trivial( graph: &Self ) -> bool;
@@ -77,134 +77,134 @@ where
         Self { data: BTreeMap::new() }
     }
 
-    fn add_node(&mut self, id: I, data: N) -> Result<(), Error> {
-        if self.data.contains_key(&id) {
-            return Err(Error::NodeAlreadyExists);
+    fn add_node( &mut self, id: I, data: N ) -> Result<(), Error> {
+        if self.data.contains_key( &id ) {
+            return Err( Error::NodeAlreadyExists );
         }
-        self.data.insert(id, (BTreeMap::new(), data));
-        Ok(())
+        self.data.insert( id, ( BTreeMap::new(), data ) );
+        Ok( () )
     }
 
-    fn get_node(&self, id: I) -> Option<&N> {
-        self.data.get(&id).map(|node| &node.1)
+    fn get_node( &self, id: I ) -> Option<&N> {
+        self.data.get( &id ).map( |node| &node.1 )
     }
 
-    fn get_node_mut(&mut self, id: I) -> Option<&mut N> {
-        self.data.get_mut(&id).map(|node| &mut node.1)
+    fn get_node_mut( &mut self, id: I ) -> Option<&mut N> {
+        self.data.get_mut( &id ).map( |node| &mut node.1 )
     }
 
-    fn get_nodes(&self) -> &BTreeMap<I, NodeData<I, N, E>> {
+    fn get_nodes( &self ) -> &BTreeMap<I, NodeData<I, N, E>> {
         &self.data
     }
 
-    fn get_nodes_mut(&mut self) -> &mut BTreeMap<I, NodeData<I, N, E>> {
+    fn get_nodes_mut( &mut self ) -> &mut BTreeMap<I, NodeData<I, N, E>> {
         &mut self.data
     }
 
-    fn contains_node(&self, id: I) -> bool {
-        self.data.contains_key(&id)
+    fn contains_node( &self, id: I ) -> bool {
+        self.data.contains_key( &id )
     }
 
-    fn remove_node(&mut self, id: I) -> Result<N, Error> {
-        if let Some(node) = self.data.remove(&id) {
-            Ok(node.1)
+    fn remove_node( &mut self, id: I ) -> Result<N, Error> {
+        if let Some(node) = self.data.remove( &id ) {
+            Ok( node.1 )
         } else {
-            Err(Error::NodeNotFound)
+            Err( Error::NodeNotFound )
         }
     }
 
-    fn delete_node(&mut self, id: I) -> Result<(), Error> {
-        if self.data.remove(&id).is_none() {
-            return Err(Error::NodeNotFound);
+    fn delete_node( &mut self, id: I ) -> Result<(), Error> {
+        if self.data.remove( &id ).is_none() {
+            return Err( Error::NodeNotFound );
         }
-        Ok(())
+        Ok( () )
     }
 
-    fn add_undirected_edge(&mut self, id1: I, id2: I, data: E) -> Result<(), Error> {
-        if let Some(node1) = self.data.get_mut(&id1) {
-            if node1.0.contains_key(&id2) {
-                return Err(Error::EdgeAlreadyExists);
+    fn add_undirected_edge( &mut self, id1: I, id2: I, data: E ) -> Result<(), Error> {
+        if let Some( node1 ) = self.data.get_mut( &id1 ) {
+            if node1.0.contains_key( &id2 ) {
+                return Err( Error::EdgeAlreadyExists );
             }
-            node1.0.insert(id2.clone(), data.clone());
+            node1.0.insert( id2.clone(), data.clone() );
         } else {
-            return Err(Error::NodeNotFound);
+            return Err( Error::NodeNotFound );
         }
-        if let Some(node2) = self.data.get_mut(&id2) {
-            if node2.0.contains_key(&id1) {
-                return Err(Error::EdgeAlreadyExists);
+        if let Some( node2 ) = self.data.get_mut( &id2 ) {
+            if node2.0.contains_key( &id1 ) {
+                return Err( Error::EdgeAlreadyExists );
             }
-            node2.0.insert(id1, data);
+            node2.0.insert( id1, data );
         } else {
-            return Err(Error::NodeNotFound);
+            return Err( Error::NodeNotFound );
         }
-        Ok(())
+        Ok( () )
     }
 
-    fn add_directed_edge(&mut self, id1: I, id2: I, data: E) -> Result<(), Error> {
-        if let Some(node1) = self.data.get_mut(&id1) {
-            if node1.0.contains_key(&id2) {
-                return Err(Error::EdgeAlreadyExists);
+    fn add_directed_edge( &mut self, id1: I, id2: I, data: E ) -> Result<(), Error> {
+        if let Some( node1 ) = self.data.get_mut( &id1 ) {
+            if node1.0.contains_key( &id2 ) {
+                return Err( Error::EdgeAlreadyExists );
             }
-            node1.0.insert(id2.clone(), data.clone());
-            return Ok(());
+            node1.0.insert( id2.clone(), data.clone() );
+            return Ok( () );
         }
-        Err(Error::NodeNotFound)
+        Err( Error::NodeNotFound )
     }
 
-    fn get_edge(&self, id1: I, id2: I) -> Option<&E> {
-        self.data.get(&id1).and_then(|node| node.0.get(&id2))
+    fn get_edge( &self, id1: I, id2: I ) -> Option<&E> {
+        self.data.get( &id1 ).and_then( |node| node.0.get( &id2 ) )
     }
 
-    fn get_edge_mut(&mut self, id1: I, id2: I) -> Option<&mut E> {
-        self.data.get_mut(&id1).and_then(|node| node.0.get_mut(&id2))
+    fn get_edge_mut( &mut self, id1: I, id2: I ) -> Option<&mut E> {
+        self.data.get_mut( &id1 ).and_then( |node| node.0.get_mut( &id2 ) )
     }
 
-    fn get_edges(&self, id: I) -> Option<&AdjacencyData<I, E>> {
-        self.data.get(&id).map(|node| &node.0)
+    fn get_edges( &self, id: I ) -> Option<&AdjacencyData<I, E>> {
+        self.data.get( &id ).map( |node| &node.0 )
     }
 
-    fn get_edges_mut(&mut self, id: I) -> Option<&mut AdjacencyData<I, E>> {
-        self.data.get_mut(&id).map(|node| &mut node.0)
+    fn get_edges_mut( &mut self, id: I ) -> Option<&mut AdjacencyData<I, E>> {
+        self.data.get_mut( &id ).map( |node| &mut node.0 )
     }
 
-    fn contains_edge(&self, id1: I, id2: I) -> bool {
-        self.data.get(&id1).map_or(false, |node| node.0.contains_key(&id2))
+    fn contains_edge( &self, id1: I, id2: I ) -> bool {
+        self.data.get( &id1 ).map_or( false, |node| node.0.contains_key( &id2 ) )
     }
 
-    fn remove_edge(&mut self, id1: I, id2: I) -> Result<E, Error> {
-        if let Some(node) = self.data.get_mut(&id1) {
-            if let Some(data) = node.0.remove(&id2) {
-                Ok(data)
+    fn remove_edge( &mut self, id1: I, id2: I ) -> Result<E, Error> {
+        if let Some( node ) = self.data.get_mut( &id1 ) {
+            if let Some( data ) = node.0.remove( &id2 ) {
+                Ok( data )
             } else {
-                Err(Error::EdgeNotFound)
+                Err( Error::EdgeNotFound )
             }
         } else {
-            Err(Error::NodeNotFound)
+            Err( Error::NodeNotFound )
         }
     }
 
-    fn delete_edge(&mut self, node1: I, node2: I) -> Result<(), Error> {
-        if let Some(node) = self.data.get_mut(&node1) {
-            if node.0.remove(&node2).is_none() {
-                return Err(Error::EdgeNotFound);
+    fn delete_edge( &mut self, node1: I, node2: I ) -> Result<(), Error> {
+        if let Some( node ) = self.data.get_mut( &node1 ) {
+            if node.0.remove( &node2 ).is_none() {
+                return Err( Error::EdgeNotFound );
             }
-            Ok(())
+            Ok( () )
         } else {
-            Err(Error::NodeNotFound)
+            Err( Error::NodeNotFound )
         }
     }
 
-    fn clear(&mut self) {
+    fn clear( &mut self ) {
         self.data.clear();
     }
 
-    fn clear_edges(&mut self) {
-        for (_, node) in self.data.iter_mut() {
+    fn clear_edges( &mut self ) {
+        for ( _, node ) in self.data.iter_mut() {
             node.0.clear();
         }
     }
 
-    fn bfs_step(&mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I>) -> Option<I> {
+    fn bfs_step( &mut self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I> ) -> Option<I> {
         let mut current: Option<I> = None;
         if let Some( current_id ) = queue.pop_front() {
             if !visited.contains( &current_id ) {
@@ -222,7 +222,7 @@ where
         current
     }
 
-    fn dfs_step(&mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I>) -> Option<I> {
+    fn dfs_step( &mut self, stack: &mut Vec<I>, visited: &mut BTreeSet<I> ) -> Option<I> {
         let mut current: Option<I> = None;
         if let Some( current_id ) = stack.pop() {
             if !visited.contains( &current_id ) {
