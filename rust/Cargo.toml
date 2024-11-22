@@ -7,4 +7,7 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-thiserror = "1.0.63"
+thiserror = "2.0.3"
+
+[dev-dependencies]
+crossbeam = "0.8.4"
