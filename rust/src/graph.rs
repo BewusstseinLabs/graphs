@@ -28,7 +28,7 @@ pub enum Error {
 
 pub type AdjacencyData<I, E> = BTreeMap<I, E>;
 
-#[derive( Clone, PartialEq, Eq )]
+#[derive( Debug, Clone, PartialEq, Eq )]
 pub struct NodeData<I, N, E> {
     data: N,
     adjacencies: AdjacencyData<I, E>
@@ -63,7 +63,7 @@ impl<I, N, E> NodeData<I, N, E> {
     }
 }
 
-#[derive( Clone, PartialEq, Eq )]
+#[derive( Debug, Clone, PartialEq, Eq )]
 pub(crate) struct GraphData<I, N, E>( BTreeMap<I, NodeData<I, N, E>> );
 
 impl<I, N, E> Deref for GraphData<I, N, E> {
@@ -81,9 +81,7 @@ impl<I, N, E> DerefMut for GraphData<I, N, E> {
 
 impl<I, N, E> GraphData<I, N, E>
 where
-    I: Clone + PartialEq + Ord,
-    N: Clone + PartialEq,
-    E: Clone + PartialEq,
+    I: Clone + Ord,
     Self: Deref<Target=BTreeMap<I, NodeData<I, N, E>>> + DerefMut<Target=BTreeMap<I, NodeData<I, N, E>>>
 {
     pub fn add_node( &mut self, id: I, data: N ) -> Result<(), Error> {
@@ -112,8 +110,8 @@ where
         self.contains_key( &id )
     }
 
-    pub fn remove_node( &mut self, id: I ) -> Result<N, Error> {
-        self.remove( &id ).ok_or( Error::NodeNotFound ).map( |node| node.data().to_owned() )
+    pub fn remove_node( &mut self, id: I ) -> Result<NodeData<I, N, E>, Error> {
+        self.remove( &id ).ok_or( Error::NodeNotFound )
     }
 
     pub fn delete_node( &mut self, id: I ) -> Result<(), Error> {
@@ -150,9 +148,7 @@ where
 
     pub fn remove_edge( &mut self, id1: I, id2: I ) -> Result<E, Error> {
         self.get_mut( &id1 ).ok_or( Error::NodeNotFound )
-            .and_then( |node| node.adjacencies_mut().remove( &id2 )
-                .ok_or( Error::EdgeNotFound ).map( |edge| edge.to_owned() )
-            )
+            .and_then( |node| node.adjacencies_mut().remove( &id2 ).ok_or( Error::EdgeNotFound ) )
     }
 
     pub fn delete_edge( &mut self, id1: I, id2: I ) -> Result<(), Error> {
@@ -168,10 +164,6 @@ where
 }
 
 pub(crate) trait GraphAccess<'a, I, N, E>
-where
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq
 {
     fn data( &'a self ) -> &'a GraphData<I, N, E>;
     fn data_mut( &'a mut self ) -> &'a mut GraphData<I, N, E>;
@@ -179,9 +171,9 @@ where
 
 pub trait GraphTraits<'a, I, N, E>
 where
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     Self: GraphAccess<'a, I, N, E>
 {
     fn add_node( &'a mut self, id: I, data: N ) -> Result<(), Error> {
@@ -208,7 +200,7 @@ where
         self.data().contains_node( id )
     }
 
-    fn remove_node( &'a mut self, id: I ) -> Result<N, Error> {
+    fn remove_node( &'a mut self, id: I ) -> Result<NodeData<I, N, E>, Error> {
         self.data_mut().remove_node( id )
     }
 
@@ -328,13 +320,10 @@ where
 
 pub trait GraphType {}
 
-#[derive( Clone, PartialEq, Eq )]
+#[derive( Debug, Clone, PartialEq, Eq )]
 pub struct Graph<T, I, N, E>
 where
-    T: GraphType,
-    I: Clone + PartialEq + Ord,
-    N: Clone + PartialEq,
-    E: Clone + PartialEq
+    T: GraphType
 {
     data: GraphData<I, N, E>,
     t: PhantomData<T>
@@ -342,10 +331,7 @@ where
 
 impl<T, I, N, E> Graph<T, I, N, E>
 where
-    T: GraphType,
-    I: Clone + PartialEq + Ord,
-    N: Clone + PartialEq,
-    E: Clone + PartialEq
+    T: GraphType
 {
     pub fn new() -> Self {
         Self {
@@ -357,10 +343,7 @@ where
 
 impl<T, I, N, E> Default for Graph<T, I, N, E>
 where
-    T: GraphType,
-    I: Clone + PartialEq + Ord,
-    N: Clone + PartialEq,
-    E: Clone + PartialEq
+    T: GraphType
 {
     fn default() -> Self {
         Self::new()
@@ -369,10 +352,7 @@ where
 
 impl<'a, T, I, N, E> GraphAccess<'a, I, N, E> for Graph<T, I, N, E>
 where
-    T: GraphType,
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq
+    T: GraphType
 {
     #[inline]
     fn data( &'a self ) -> &'a GraphData<I, N, E> {

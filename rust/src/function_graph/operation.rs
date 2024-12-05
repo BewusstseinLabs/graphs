@@ -14,22 +14,19 @@ use crate::function_graph::{
 #[derive(Error, Debug)]
 pub enum Error {}
 
-#[derive(Clone)]
-pub struct Operation<I>
-where
-    I: Clone + PartialEq + Ord + 'static
-{
+#[derive( Debug )]
+pub struct Operation<I> {
     variables: Variables<I>,
     function: Function<I>
 }
 
-impl<I> Operation<I>
+impl<'a, I> Operation<I>
 where
-    I: Clone + PartialEq + Ord + Hash + 'static
+    I: 'a + Ord + Hash
 {
     pub fn new<const N: usize, F>( variables: [ ( I, Variable ); N ], function: F ) -> Self
     where
-        F: Fn( &Variables<I> ) + Send + Sync + 'static
+        F: 'static + Fn( &Variables<I> ) + Send + Sync
     {
         Self {
             variables: Variables::new( variables ),
@@ -66,7 +63,7 @@ where
 
 impl<I> PartialEq for Operation<I>
 where
-    I: Clone + PartialEq + Ord + Hash + 'static
+    I: 'static + Ord + Hash
 {
     fn eq( &self, other: &Self ) -> bool {
         self.function().deref().as_ref().as_ref().type_id() == other.function().deref().as_ref().as_ref().type_id()

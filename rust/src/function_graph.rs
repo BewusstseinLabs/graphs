@@ -43,48 +43,40 @@ pub enum Error {
     OperationError( #[from] OperationError )
 }
 
+#[derive( Debug )]
 pub struct Functional ();
 impl GraphType for Functional {}
-pub type FnGraph<I, J> = Graph<Functional, I, Operation<J>, ()>;
-pub type FnTraverser<'a, I, J> = Traverser<'a, Functional, I, Operation<J>, ()>;
+pub type FnGraph<I, J> = Graph<Functional, I, Operation<J>, bool>;
+pub type FnTraverser<'a, I, J> = Traverser<'a, I, Operation<J>, bool, Graph<Functional, I, Operation<J>, bool>>;
 
-impl<I, J> FnGraph<I, J>
+impl<'a, I, J> FnGraph<I, J>
 where
-    I: Clone + PartialEq + Ord + Display + 'static,
-    J: Clone + PartialEq + Ord + Hash + Display + Send + 'static
+    I: 'a + Clone + Ord + Display,
+    J: 'static + Clone + Ord + Hash + Display
 {
     pub fn generate_dot_to_file( &self, file_name: String ) {
         let mut dot = String::new();
         dot.push_str( "digraph G {\n" );
         for ( node_id, node_data ) in self.nodes().iter() {
             node_data.data().variables().iter().for_each( |( _, _ )|
-                dot.push_str( "" )
+                dot.push_str( &format!( " {} [label=\"{}\"];\n", node_id, node_id ) )
             );
 
-            for adj_node_id in node_data.adjacencies().keys() {
-                dot.push_str( &format!( " {} -> {};\n", node_id, adj_node_id ) );
+            for ( adj_node_id, edge ) in node_data.adjacencies().iter() {
+                if *edge {
+                    dot.push_str( &format!( " {} -> {} [label=\"{}\" color=\"blue\"];\n", node_id, adj_node_id, edge ) );
+                } else {
+                    dot.push_str( &format!( " {} -> {} [label=\"{}\" color=\"red\"];\n", node_id, adj_node_id, edge ) );
+                }
             }
         }
         dot.push_str( "}\n" );
         std::fs::write( file_name, dot ).unwrap();
     }
 
-    #[allow(dead_code)]
-    fn variable_to_string( variable: &Variable ) -> String {
-        if let Some( val ) = variable.read().downcast_ref::<i32>() {
-            val.to_string()
-        } else if let Some( val ) = variable.read().downcast_ref::<f64>() {
-            val.to_string()
-        } else if let Some( val ) = variable.read().downcast_ref::<String>() {
-            val.clone()
-        } else {
-            "Unknown".to_string()
-        }
-    }
-
     pub fn add_operation<const N: usize, F>( &mut self, id: I, variables: [ ( J, Variable ); N ], function: F ) -> Result<(), Error>
     where
-        F: Fn( &Variables<J> ) + Send + Sync + 'static
+        F: 'static + Fn( &Variables<J> ) + Send + Sync
     {
         self.add_node( id, Operation::new(
             variables,
@@ -94,18 +86,50 @@ where
     }
 }
 
-impl<'a, I, J> GraphTraits<'a, I, Operation<J>, ()> for FnGraph<I, J>
+impl<'a, I, J> GraphTraits<'a, I, Operation<J>, bool> for FnGraph<I, J>
 where
-    I: 'static + Clone + PartialEq + Ord,
-    J: 'static + Clone + PartialEq + Ord + Hash
+    I: 'a + Clone + Ord,
+    J: 'static + Clone + Ord + Hash
 {}
 
-impl<'a, I, J> TraverserTraits<'a, Functional, I, Operation<J>, (), FnGraph<I, J>> for Traverser<'a, I, Operation<J>, (), FnGraph<I, J>>
+impl<'a, I, J> TraverserTraits<'a, Functional, I, Operation<J>, bool, FnGraph<I, J>> for FnTraverser<'a, I, J>
 where
-    I: 'static + Clone + PartialEq + Ord,
-    J: 'static + Clone + PartialEq + Ord + Hash,
-    Self: TraverserAccess<'a, Functional, I, Operation<J>, (), FnGraph<I, J>>
+    I: 'a + Clone + Ord,
+    J: 'static + Clone + Ord + Hash,
+    Self: TraverserAccess<'a, Functional, I, Operation<J>, bool, FnGraph<I, J>>
 {
+    fn bfs_step( &'a self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I> ) -> Option<I> {
+        while let Some(current_id) = queue.pop_front() {
+            if visited.insert( current_id.clone() ) {
+                if let Some( current_node ) = self.graph().data().get( &current_id ) {
+                    for ( next_id, edge ) in current_node.adjacencies().iter() {
+                        if *edge && !visited.contains( next_id ) {
+                            queue.push_back( next_id.clone() );
+                        }
+                    }
+                }
+                return Some( current_id );
+            }
+        }
+        None
+    }
+
+    fn dfs_step( &'a self, stack: &mut Vec<I>, visited: &mut BTreeSet<I> ) -> Option<I> {
+        while let Some( current_id ) = stack.pop() {
+            if visited.insert( current_id.clone() ) {
+                if let Some( current_node ) = self.graph().data().get( &current_id ) {
+                    for ( next_id, edge ) in current_node.adjacencies().iter() {
+                        if *edge && !visited.contains( next_id ) {
+                            stack.push( next_id.clone() );
+                        }
+                    }
+                }
+                return Some( current_id );
+            }
+        }
+        None
+    }
+
     fn bfs( &'a self, start: I ) {
         let mut queue = VecDeque::new();
         let mut visited = BTreeSet::new();
@@ -133,10 +157,10 @@ where
     }
 }
 
-impl<'a, I, J> Traversable<'a, Functional, I, Operation<J>, ()> for FnGraph<I, J>
+impl<'a, I, J> Traversable<'a, Functional, I, Operation<J>, bool> for FnGraph<I, J>
 where
-    I: 'static + Clone + PartialEq + Ord,
-    J: 'static + Clone + PartialEq + Ord + Hash,
+    I: 'a + Clone + Ord,
+    J: 'static + Clone + Ord + Hash,
 {}
 
 #[cfg(test)]
@@ -152,18 +176,18 @@ mod tests {
         },
         function_graph::{
             FnGraph,
-            Variable
+            variable::Variable
         }
     };
 
     #[test]
     fn test() {
-        let a = Variable::new( 0 );
-        let b = Variable::new( 0 );
-        let c = Variable::new( 0 );
-        let d = Variable::new( 0 );
-        let e = Variable::new( "hello".to_string() );
-        let f = Variable::new( "world".to_string() );
+        let a = Variable::shared( 0 );
+        let b = Variable::shared( 0 );
+        let c = Variable::shared( 0 );
+        let d = Variable::shared( 0 );
+        let e = Variable::shared( "hello".to_string() );
+        let f = Variable::shared( "world".to_string() );
 
         //graph.generate_dot_to_file( "graphs/function_graph_before.dot".to_string() );
         let start = std::time::Instant::now();
@@ -205,12 +229,12 @@ mod tests {
     fn test_function_graph() {
         let mut graph = FnGraph::<char, char>::new();
 
-        let a = Variable::new( 0 );
-        let b = Variable::new( 0 );
-        let c = Variable::new( 0 );
-        let d = Variable::new( 0 );
-        let e = Variable::new( "hello".to_string() );
-        let f = Variable::new( "world".to_string() );
+        let a = Variable::shared( 0 );
+        let b = Variable::shared( 0 );
+        let c = Variable::shared( 0 );
+        let d = Variable::shared( 0 );
+        let e = Variable::shared( "hello".to_string() );
+        let f = Variable::shared( "world".to_string() );
 
         graph.add_operation( 'a',
             [
@@ -275,11 +299,11 @@ mod tests {
         ).unwrap();
         graph.add_operation( 'f', [], |_| println!( "Done!" ) ).unwrap();
 
-        graph.add_edge( 'a', 'b', () ).unwrap();
-        graph.add_edge( 'b', 'c', () ).unwrap();
-        graph.add_edge( 'c', 'd', () ).unwrap();
-        graph.add_edge( 'd', 'e', () ).unwrap();
-        graph.add_edge( 'e', 'f', () ).unwrap();
+        graph.add_edge( 'a', 'b', true ).unwrap();
+        graph.add_edge( 'b', 'c', true ).unwrap();
+        graph.add_edge( 'c', 'd', true ).unwrap();
+        graph.add_edge( 'd', 'e', true ).unwrap();
+        graph.add_edge( 'e', 'f', true ).unwrap();
 
         //graph.generate_dot_to_file( "graphs/function_graph_before.dot".to_string() );
         let start = std::time::Instant::now();
@@ -294,11 +318,11 @@ mod tests {
         let mut graph = FnGraph::<char, char>::new();
 
         // Define variables as strings
-        let a = Variable::new( "2".to_string() );
-        let b = Variable::new( "+".to_string() );
-        let c = Variable::new( "3".to_string() );
-        let d = Variable::new( "=".to_string() );
-        let e = Variable::new( "5".to_string() );
+        let a = Variable::shared( "2".to_string() );
+        let b = Variable::shared( "+".to_string() );
+        let c = Variable::shared( "3".to_string() );
+        let d = Variable::shared( "=".to_string() );
+        let e = Variable::shared( "5".to_string() );
 
         // Add nodes to the graph
         graph.add_operation( 'a',
@@ -346,10 +370,10 @@ mod tests {
             }
         ).unwrap();
 
-        graph.add_edge( 'a', 'b', () ).unwrap();
-        graph.add_edge( 'b', 'c', () ).unwrap();
-        graph.add_edge( 'c', 'd', () ).unwrap();
-        graph.add_edge( 'd', 'e', () ).unwrap();
+        graph.add_edge( 'a', 'b', true ).unwrap();
+        graph.add_edge( 'b', 'c', true ).unwrap();
+        graph.add_edge( 'c', 'd', true ).unwrap();
+        graph.add_edge( 'd', 'e', true ).unwrap();
 
         //graph.generate_dot_to_file( "graphs/string_equation_graph_before.dot".to_string() );
         let start = std::time::Instant::now();
@@ -362,15 +386,15 @@ mod tests {
     #[test]
     fn test_function_graph_with_multiple_branches() {
         let mut graph = FnGraph::<char, char>::new();
-        let a = Variable::new( 0 );
-        let b = Variable::new( 0 );
-        let c = Variable::new( 0 );
-        let d = Variable::new( 0 );
-        let e = Variable::new( 0 );
-        let f = Variable::new( 0 );
-        let g = Variable::new( 0 );
-        let h = Variable::new( 0 );
-        let i = Variable::new( 0 );
+        let a = Variable::shared( 0 );
+        let b = Variable::shared( 0 );
+        let c = Variable::shared( 0 );
+        let d = Variable::shared( 0 );
+        let e = Variable::shared( 0 );
+        let f = Variable::shared( 0 );
+        let g = Variable::shared( 0 );
+        let h = Variable::shared( 0 );
+        let i = Variable::shared( 0 );
 
         // Node 0: Add 2
         graph.add_operation( 'a',
@@ -453,7 +477,7 @@ mod tests {
             ],
             |variables| {
                 if let ( Some( c ), Some( f ) ) = (
-                    variables.read( &'z' ).downcast_ref::<i32>(),
+                    variables.read( &'c' ).downcast_ref::<i32>(),
                     variables.write( &'f' ).downcast_mut::<i32>()
                 ) {
                     *f = *c - 2;
@@ -514,14 +538,14 @@ mod tests {
         ).unwrap();
 
         // Edges
-        graph.add_edge( 'a', 'b', () ).unwrap();
-        graph.add_edge( 'b', 'c', () ).unwrap();
-        graph.add_edge( 'c', 'd', () ).unwrap(); // Divisible by 3 branch
-        graph.add_edge( 'c', 'e', () ).unwrap(); // Not divisible by 3 branch
-        graph.add_edge( 'd', 'f', () ).unwrap(); // Further divisible by 3 branch
-        graph.add_edge( 'e', 'g', () ).unwrap(); // Further not divisible by 3 branch
-        graph.add_edge( 'f', 'h', () ).unwrap(); // Converge branch
-        graph.add_edge( 'g', 'h', () ).unwrap(); // Converge branch
+        graph.add_edge( 'a', 'b', true ).unwrap();
+        graph.add_edge( 'b', 'c', true ).unwrap();
+        graph.add_edge( 'c', 'd', true ).unwrap(); // Divisible by 3 branch
+        graph.add_edge( 'c', 'e', true ).unwrap(); // Not divisible by 3 branch
+        graph.add_edge( 'd', 'f', true ).unwrap(); // Further divisible by 3 branch
+        graph.add_edge( 'e', 'g', true ).unwrap(); // Further not divisible by 3 branch
+        graph.add_edge( 'f', 'h', true ).unwrap(); // Converge branch
+        graph.add_edge( 'g', 'h', true ).unwrap(); // Converge branch
 
         //graph.generate_dot_to_file( "graphs/function_graph_with_multiple_branches_before.dot".to_string() );
         let start = std::time::Instant::now();
@@ -536,10 +560,10 @@ mod tests {
         let mut graph = FnGraph::<char, char>::new();
         let mut sub_graph = FnGraph::<char, char>::new();
 
-        let a = Variable::new( 'a' );
-        let b = Variable::new( 'b' );
-        let c = Variable::new( 'c' );
-        let d = Variable::new( 'd' );
+        let a = Variable::shared( 'a' );
+        let b = Variable::shared( 'b' );
+        let c = Variable::shared( 'c' );
+        let d = Variable::shared( 'd' );
 
         sub_graph.add_operation( 'a',
             [ ( 'a', a.clone() ) ],
@@ -577,14 +601,12 @@ mod tests {
             }
         ).unwrap();
 
-        sub_graph.add_edge( 'a', 'b', () ).unwrap();
-        sub_graph.add_edge( 'b', 'c', () ).unwrap();
-        sub_graph.add_edge( 'c', 'd', () ).unwrap();
-
-        let e = Variable::new( sub_graph );
+        sub_graph.add_edge( 'a', 'b', true ).unwrap();
+        sub_graph.add_edge( 'b', 'c', true ).unwrap();
+        sub_graph.add_edge( 'c', 'd', true ).unwrap();
 
         graph.add_operation( 'a',
-            [ ( 'e', e.clone() ) ],
+            [ ( 'e', Variable::owned( sub_graph ) ) ],
             |variables| {
                 if let Some( e ) = variables.read( &'e' ).downcast_ref::<FnGraph<char, char>>() {
                     e.traverser().bfs( 'a' );
@@ -605,8 +627,8 @@ mod tests {
 
         let mut graph = FnGraph::<&'static str, &'static str>::new();
 
-        let a = Variable::new( 4 );
-        let c = Variable::new( 0 );
+        let a = Variable::shared( 4 );
+        let c = Variable::shared( 0 );
 
         let ( a_sender, b_receiver ) = bounded::<i32>( 1 );
         let ( b_sender, c_receiver ) = bounded::<i32>( 1 );
@@ -614,7 +636,7 @@ mod tests {
         graph.add_operation( "a",
             [
                 ( "a", a.clone() ),
-                ( "a_sender", Variable::new( a_sender ) )
+                ( "a_sender", Variable::owned( a_sender ) )
             ],
             |variables| {
                 if let ( Some( a ), Some( a_sender ) ) = (
@@ -628,8 +650,8 @@ mod tests {
 
         graph.add_operation( "b",
             [
-                ( "b_receiver", Variable::new( b_receiver ) ),
-                ( "b_sender", Variable::new( b_sender ) )
+                ( "b_receiver", Variable::owned( b_receiver ) ),
+                ( "b_sender", Variable::owned( b_sender ) )
             ],
             |variables| {
                 if let ( Some( b_receiver ), Some( b_sender ) ) = (
@@ -645,7 +667,7 @@ mod tests {
 
         graph.add_operation( "c",
             [
-                ( "c_receiver", Variable::new( c_receiver ) ),
+                ( "c_receiver", Variable::owned( c_receiver ) ),
                 ( "c", c.clone() )
             ],
             |variables| {
@@ -660,15 +682,18 @@ mod tests {
             }
         ).unwrap();
 
-        graph.add_edge( "a", "b", () ).unwrap();
-        graph.add_edge( "b", "c", () ).unwrap();
+        graph.add_edge( "a", "b", true ).unwrap();
+        graph.add_edge( "b", "c", true ).unwrap();
 
         let start = std::time::Instant::now();
         graph.traverser().bfs( "a" );
         let duration = start.elapsed();
         println!( "Time taken to traverse the graph: {:?}", duration );
-
         println!( "a: {}", a.read().downcast_ref::<i32>().unwrap() );
         println!( "c: {}", c.read().downcast_ref::<i32>().unwrap() );
+
+        graph.generate_dot_to_file( "graphs/mpsc_graph.dot".to_string() );
+
+        dbg!( "{}", graph );
     }
 }

@@ -2,12 +2,19 @@
 name = "graphs"
 version = "0.1.0"
 edition = "2021"
+resolver = "2"
 
 [lib]
 path = "src/lib.rs"
 
 [dependencies]
 thiserror = "2.0.3"
+dyn-clone = "1.0.17"
 
 [dev-dependencies]
 crossbeam = "0.8.4"
+
+[features]
+unstable = []
+
+#graphs = { path = ".", features = ["unstable"] }

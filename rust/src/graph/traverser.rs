@@ -14,20 +14,21 @@ use crate::graph::{
 pub(crate) trait TraverserAccess<'a, T, I, N, E, G>
 where
     T: GraphType,
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     G: GraphTraits<'a, I, N, E>
 {
     fn graph( &'a self ) -> &'a G;
+    fn graph_mut( &'a mut self ) -> &'a mut G;
 }
 
 pub trait TraverserTraits<'a, T, I, N, E, G>
 where
     T: 'static + GraphType,
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     G: 'a + GraphTraits<'a, I, N, E>,
     Self: TraverserAccess<'a, T, I, N, E, G>,
 {
@@ -129,22 +130,27 @@ where
 pub trait Traversable<'a, T, I, N, E>
 where
     T: GraphType,
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     Self: Sized,
     Self: GraphTraits<'a, I, N, E>
 {
     fn traverser( &'a self ) -> Traverser<'a, I, N, E, Self> {
         Traverser::new( self )
     }
+
+    fn traverser_mut( &'a mut self ) -> TraverserMut<'a, I, N, E, Self> {
+        TraverserMut::new( self )
+    }
 }
 
+#[derive( Debug, Clone )]
 pub struct Traverser<'a, I, N, E, G>
 where
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     G: GraphTraits<'a, I, N, E>
 {
     graph: &'a G,
@@ -153,27 +159,79 @@ where
     e: PhantomData<E>
 }
 
+#[derive( Debug )]
+pub struct TraverserMut<'a, I, N, E, G>
+where
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
+    G: GraphTraits<'a, I, N, E>
+{
+    graph: &'a mut G,
+    i: PhantomData<I>,
+    n: PhantomData<N>,
+    e: PhantomData<E>
+}
+
 impl<'a, T, I, N, E, G> TraverserAccess<'a, T, I, N, E, G> for Traverser<'a, I, N, E, G>
 where
     T: GraphType,
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     G: GraphTraits<'a, I, N, E>
 {
     fn graph( &'a self ) -> &'a G {
-        &self.graph
+        self.graph
+    }
+
+    fn graph_mut( &'a mut self ) -> &'a mut G {
+        panic!( "Cannot access mutable graph from immutable traverser" )
+    }
+}
+
+impl<'a, T, I, N, E, G> TraverserAccess<'a, T, I, N, E, G> for TraverserMut<'a, I, N, E, G>
+where
+    T: GraphType,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
+    G: GraphTraits<'a, I, N, E>
+{
+    fn graph( &'a self ) -> &'a G {
+        self.graph
+    }
+
+    fn graph_mut( &'a mut self ) -> &'a mut G {
+        self.graph
     }
 }
 
 impl<'a, I, N, E, G> Traverser<'a, I, N, E, G>
 where
-    I: 'a + Clone + PartialEq + Ord,
-    N: 'a + Clone + PartialEq,
-    E: 'a + Clone + PartialEq,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
     G: GraphTraits<'a, I, N, E>
 {
     pub fn new( graph: &'a G ) -> Self {
+        Self {
+            graph,
+            i: PhantomData::<I>,
+            n: PhantomData::<N>,
+            e: PhantomData::<E>
+        }
+    }
+}
+
+impl<'a, I, N, E, G> TraverserMut<'a, I, N, E, G>
+where
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
+    G: GraphTraits<'a, I, N, E>
+{
+    pub fn new( graph: &'a mut G ) -> Self {
         Self {
             graph,
             i: PhantomData::<I>,
