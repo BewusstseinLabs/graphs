@@ -7,9 +7,9 @@ pub mod traverser;
 //: Standard
 use std::{
     cmp::{ Eq, Ord, PartialEq },
-    collections::{ BTreeMap, BTreeSet, VecDeque },
+    collections::BTreeMap,
     marker::PhantomData,
-    ops::{ Deref, DerefMut, Not }
+    ops::{ Deref, DerefMut }
 };
 
 use thiserror::Error;
@@ -34,6 +34,7 @@ pub struct NodeData<I, N, E> {
     adjacencies: AdjacencyData<I, E>
 }
 
+#[allow(clippy::needless_lifetimes)]
 impl<I, N, E> NodeData<I, N, E> {
     pub fn new( data: N ) -> Self {
         Self {
@@ -42,28 +43,28 @@ impl<I, N, E> NodeData<I, N, E> {
         }
     }
 
-    #[inline]
-    pub fn data( &self ) -> &N {
+    #[inline(always)]
+    pub fn data<'a>( &'a self ) -> &'a N {
         &self.data
     }
 
-    #[inline]
-    pub fn data_mut( &mut self ) -> &mut N {
+    #[inline(always)]
+    pub fn data_mut<'a>( &'a mut self ) -> &'a mut N {
         &mut self.data
     }
 
-    #[inline]
-    pub fn adjacencies( &self ) -> &AdjacencyData<I, E> {
+    #[inline(always)]
+    pub fn adjacencies<'b>( &'b self ) -> &'b AdjacencyData<I, E> {
         &self.adjacencies
     }
 
-    #[inline]
-    pub fn adjacencies_mut( &mut self ) -> &mut AdjacencyData<I, E> {
+    #[inline(always)]
+    pub fn adjacencies_mut<'b>( &'b mut self ) -> &'b mut AdjacencyData<I, E> {
         &mut self.adjacencies
     }
 }
 
-#[derive( Debug, Clone, PartialEq, Eq )]
+#[derive( Debug, Clone, Default, PartialEq, Eq )]
 pub(crate) struct GraphData<I, N, E>( BTreeMap<I, NodeData<I, N, E>> );
 
 impl<I, N, E> Deref for GraphData<I, N, E> {
@@ -81,9 +82,13 @@ impl<I, N, E> DerefMut for GraphData<I, N, E> {
 
 impl<I, N, E> GraphData<I, N, E>
 where
-    I: Clone + Ord,
+    I: Ord,
     Self: Deref<Target=BTreeMap<I, NodeData<I, N, E>>> + DerefMut<Target=BTreeMap<I, NodeData<I, N, E>>>
 {
+    pub fn new() -> Self {
+        Self( BTreeMap::new() )
+    }
+
     pub fn add_node( &mut self, id: I, data: N ) -> Result<(), Error> {
         self.contains_key( &id )
             .then_some( Err( Error::NodeAlreadyExists ) )
@@ -143,7 +148,7 @@ where
     }
 
     pub fn contains_edge( &self, id1: I, id2: I ) -> bool {
-        self.get( &id1 ).map_or( false, |node| node.adjacencies().contains_key( &id2 ) )
+        self.get( &id1 ).is_some_and( |node| node.adjacencies().contains_key( &id2 ) )
     }
 
     pub fn remove_edge( &mut self, id1: I, id2: I ) -> Result<E, Error> {
@@ -169,12 +174,11 @@ pub(crate) trait GraphAccess<'a, I, N, E>
     fn data_mut( &'a mut self ) -> &'a mut GraphData<I, N, E>;
 }
 
-pub trait GraphTraits<'a, I, N, E>
+pub trait GraphTraits<'a, I, N, E>: GraphAccess<'a, I, N, E>
 where
     I: 'a + Clone + Ord,
     N: 'a + PartialEq,
-    E: 'a + PartialEq,
-    Self: GraphAccess<'a, I, N, E>
+    E: 'a + PartialEq
 {
     fn add_node( &'a mut self, id: I, data: N ) -> Result<(), Error> {
         self.data_mut().add_node( id, data )
@@ -254,7 +258,7 @@ where
                 return false;
             }
             for neighbor in neighbors.adjacencies().keys() {
-                if !self.data().get( neighbor ).map_or( false, |n| n.adjacencies().contains_key( node ) ) {
+                if !self.data().get( neighbor ).is_some_and( |n| n.adjacencies().contains_key( node ) ) {
                     return false;
                 }
             }
@@ -267,7 +271,7 @@ where
     }
 
     fn is_trivial( &'a self ) -> bool {
-        self.data().len() == 1 && self.data().values().next().map_or( false, |neighbors| neighbors.adjacencies().is_empty() )
+        self.data().len() == 1 && self.data().values().next().is_some_and( |neighbors| neighbors.adjacencies().is_empty())
     }
 
     fn is_null( &'a self ) -> bool {
@@ -280,7 +284,7 @@ where
 
     fn is_subgraph(&'a self, subgraph: &'a Self) -> bool {
         subgraph.data().iter().all( |(node, neighbors)| {
-            self.data().get( node ).map_or( false, |graph_node| {
+            self.data().get( node ).is_some_and( |graph_node| {
                 neighbors.adjacencies().keys().all( |key| graph_node.adjacencies().contains_key( key ) )
             })
         })
@@ -320,7 +324,7 @@ where
 
 pub trait GraphType {}
 
-#[derive( Debug, Clone, PartialEq, Eq )]
+#[derive( Debug, Clone, Default, PartialEq, Eq )]
 pub struct Graph<T, I, N, E>
 where
     T: GraphType
@@ -331,22 +335,14 @@ where
 
 impl<T, I, N, E> Graph<T, I, N, E>
 where
-    T: GraphType
+    T: GraphType,
+    I: Ord,
 {
     pub fn new() -> Self {
         Self {
-            data: GraphData( BTreeMap::new() ),
+            data: GraphData::new(),
             t: PhantomData
         }
-    }
-}
-
-impl<T, I, N, E> Default for Graph<T, I, N, E>
-where
-    T: GraphType
-{
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -354,12 +350,12 @@ impl<'a, T, I, N, E> GraphAccess<'a, I, N, E> for Graph<T, I, N, E>
 where
     T: GraphType
 {
-    #[inline]
+    #[inline(always)]
     fn data( &'a self ) -> &'a GraphData<I, N, E> {
         &self.data
     }
 
-    #[inline]
+    #[inline(always)]
     fn data_mut( &'a mut self ) -> &'a mut GraphData<I, N, E> {
         &mut self.data
     }

@@ -17,6 +17,7 @@ use crate::graph::{
     }
 };
 
+#[derive( Clone, Default, Debug, PartialEq )]
 pub struct Undirected();
 impl GraphType for Undirected {}
 pub type UnGraph<I, N, E> = Graph<Undirected, I, N, E>;
@@ -225,5 +226,14 @@ mod tests {
         graph.add_node( 2, () ).unwrap();
         graph.add_edge( 1, 2, () ).unwrap();
         assert_eq!( graph.size(), 1 );
+    }
+
+    #[test]
+    fn debug_test() {
+        let mut graph = UnGraph::<usize, (), ()>::new();
+        graph.add_node( 1, () ).unwrap();
+        graph.add_node( 2, () ).unwrap();
+        graph.add_edge( 1, 2, () ).unwrap();
+        println!( "{:?}", graph );
     }
 }

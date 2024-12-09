@@ -17,16 +17,17 @@ use crate::graph::{
     }
 };
 
+#[derive( Clone, Default, Debug, PartialEq )]
 pub struct Directed();
 impl GraphType for Directed {}
 pub type DiGraph<I, N, E> = Graph<Directed, I, N, E>;
 pub type DiTraverser<'a, I, N, E> = Traverser<'a, I, N, E, DiGraph<I, N, E>>;
 
-impl<'a, I, N, E> DiGraph<I, N, E>
+impl<I, N, E> DiGraph<I, N, E>
 where
-    I: 'a + Clone + Ord + Display,
-    N: 'a + Clone + PartialEq + Display,
-    E: 'a + Clone + PartialEq + Display
+    I: Clone + Ord + Display,
+    N: Clone + PartialEq + Display,
+    E: Clone + PartialEq + Display
 {
     pub fn generate_dot_to_file( &self, file_name: String ) {
         let mut dot = String::new();

@@ -27,7 +27,7 @@ impl Variable {
         Self::Shared( Arc::new( RwLock::new( value ) ) )
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn read( &self ) -> RwLockReadGuard<Inner> {
         match &self {
             Self::Owned( value ) => value.read().expect( "Failed to acquire read lock" ),
@@ -35,7 +35,7 @@ impl Variable {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn write( &self ) -> RwLockWriteGuard<Inner> {
         match &self {
             Self::Owned( value ) => value.write().expect( "Failed to acquire write lock" ),
@@ -44,7 +44,7 @@ impl Variable {
     }
 
     #[cfg(feature = "unstable")]
-    #[inline]
+    #[inline(always)]
     pub fn read_as<T>(&self) -> Option<MappedRwLockReadGuard<T>>
     where
         T: 'static + Send + Sync,
@@ -56,7 +56,7 @@ impl Variable {
     }
 
     #[cfg(feature = "unstable")]
-    #[inline]
+    #[inline(always)]
     pub fn write_as<T>(&self) -> Option<MappedRwLockWriteGuard<T>>
     where
         T: 'static + Send + Sync,
@@ -124,23 +124,23 @@ where
         Self( HashMap::from( variables ) )
     }
 
-    #[inline]
+    #[inline(always)]
     fn get( &self, key: &I ) -> &Variable {
         self.0.get( key ).expect( "Variable not found" )
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn read( &self, key: &I ) -> RwLockReadGuard<Inner> {
         self.get( key ).read()
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn write( &self, key: &I ) -> RwLockWriteGuard<Inner> {
         self.get( key ).write()
     }
 
     #[cfg(feature = "unstable")]
-    #[inline]
+    #[inline(always)]
     pub fn read_as<T>( &self, key: &I ) -> Option<MappedRwLockReadGuard<T>>
     where
         T: 'static + Send + Sync
@@ -149,7 +149,7 @@ where
     }
 
     #[cfg(feature = "unstable")]
-    #[inline]
+    #[inline(always)]
     pub fn write_as<T>( &self, key: &I ) -> Option<MappedRwLockWriteGuard<T>>
     where
         T: 'static + Send + Sync
