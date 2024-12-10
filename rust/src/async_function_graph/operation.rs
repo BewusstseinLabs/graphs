@@ -1,7 +1,10 @@
 use std::{
     any::Any,
     hash::Hash,
-    ops::Deref,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+    pin::Pin,
+    future::Future,
 };
 use thiserror::Error;
 use crate::{
@@ -22,10 +25,12 @@ impl<'a, I> AsyncOperation<I>
 where
     I: 'a + Ord + Hash,
 {
-    pub fn new<const N: usize, F, Fut>(variables: [(I, Variable); N], function: F) -> Self
+    pub fn new<const N: usize, F>(variables: [(I, Variable); N], function: F) -> Self
     where
-        F: 'static + Fn( &Variables<I> ) -> Fut + Send + Sync,
-        Fut: std::future::Future<Output = ()> + Send + 'static,
+        F: for<'b> Fn(&'b Variables<I>) -> Pin<Box<dyn Future<Output = ()> + Send + 'b>>
+        + Send
+        + Sync
+        + 'static,
     {
         Self {
             variables: Variables::new( variables ),
@@ -50,12 +55,12 @@ where
     }
 
     pub async fn execute( &self ) -> Result<(), Error> {
-        (self.function)( &self.variables ).await;
+        self.function.call( &self.variables ).await;
         Ok( () )
     }
 
     pub async fn execute_mut( &mut self ) -> Result<(), Error> {
-        (self.function)( &mut self.variables ).await;
+        self.function.call( &mut self.variables ).await;
         Ok( () )
     }
 }
@@ -65,6 +70,6 @@ where
     I: 'static + Ord + Hash,
 {
     fn eq( &self, other: &Self ) -> bool {
-        self.function().deref().as_ref().as_ref().type_id() == other.function().deref().as_ref().as_ref().type_id()
+        self.function().deref().as_ref().type_id() == other.function().deref().as_ref().type_id()
     }
 }

@@ -6,6 +6,11 @@ pub mod function;
 pub mod operation;
 
 use std::{
+    any::Any,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+    pin::Pin,
+    future::Future,
     hash::Hash,
     collections::{ BTreeSet, VecDeque },
     fmt::Display,
@@ -71,10 +76,12 @@ where
         std::fs::write( file_name, dot ).unwrap();
     }
 
-    pub fn add_operation<const N: usize, F, Fut>( &mut self, id: I, variables: [ ( J, Variable ); N ], function: F ) -> Result<(), Error>
+    pub fn add_operation<const N: usize, F>( &mut self, id: I, variables: [ ( J, Variable ); N ], function: F ) -> Result<(), Error>
     where
-        F: 'static + Fn(&Variables<J>) -> Fut + Send + Sync,
-        Fut: std::future::Future<Output = ()> + Send + 'static,
+        F: for<'b> Fn(&'b Variables<J>) -> Pin<Box<dyn Future<Output = ()> + Send + 'b>>
+        + Send
+        + Sync
+        + 'static,
     {
         self.add_node( id, AsyncOperation::new(
             variables,
