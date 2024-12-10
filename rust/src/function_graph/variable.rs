@@ -86,14 +86,20 @@ impl std::fmt::Debug for Variable {
     }
 }
 
-impl From <Arc<RwLock<Inner>>> for Variable {
-    fn from( value: Arc<RwLock<Inner>> ) -> Self {
+impl<T> From <Arc<RwLock<T>>> for Variable
+where
+    T: Any + Send + Sync
+{
+    fn from( value: Arc<RwLock<T>> ) -> Self {
         Self::Shared( value )
     }
 }
 
-impl From <Box<RwLock<Inner>>> for Variable {
-    fn from( value: Box<RwLock<Inner>> ) -> Self {
+impl<T> From <Box<RwLock<T>>> for Variable
+where
+    T: Any + Send + Sync
+{
+    fn from( value: Box<RwLock<T>> ) -> Self {
         Self::Owned( value )
     }
 }
