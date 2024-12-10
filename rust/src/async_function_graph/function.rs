@@ -29,17 +29,16 @@ where
 pub struct AsyncFunction<I>(Arc<dyn AsyncFn<I> + 'static>);
 
 impl<I> AsyncFunction<I> {
-    pub fn new<T>(function: T) -> Self
+    pub fn new<T>( function: T ) -> Self
     where
-        T: for<'a> Fn(&'a Variables<I>) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>>
+        T: for<'a> Fn( &'a Variables<I> ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>>
             + Send
             + Sync
             + 'static,
     {
-        Self(Arc::new(function))
+        Self( Arc::new( function ) )
     }
 
-    // Provide a method to call the function.
     pub fn call<'a>(
         &'a self,
         vars: &'a Variables<I>,
