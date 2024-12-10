@@ -1,10 +1,10 @@
 digraph G {
  a [label="a"];
  a [label="a"];
- a -> b [label="true"];
+ a -> b [label="true" color="blue"];
  b [label="b"];
  b [label="b"];
- b -> c [label="true"];
+ b -> c [label="true" color="blue"];
  c [label="c"];
  c [label="c"];
 }

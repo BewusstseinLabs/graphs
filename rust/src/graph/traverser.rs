@@ -127,6 +127,110 @@ where
     }
 }
 
+pub trait AsyncTraverserTraits<'a, T, I, N, E, G>
+where
+    T: 'static + GraphType,
+    I: 'a + Clone + Ord,
+    N: 'a + PartialEq,
+    E: 'a + PartialEq,
+    G: 'a + GraphTraits<'a, I, N, E>,
+    Self: TraverserAccess<'a, T, I, N, E, G>,
+{
+    async fn bfs_step( &'a self, queue: &mut VecDeque<I>, visited: &mut BTreeSet<I> ) -> Option<I> {
+        while let Some(current_id) = queue.pop_front() {
+            if visited.insert( current_id.clone() ) {
+                if let Some( current_node ) = self.graph().data().get( &current_id ) {
+                    for next_id in current_node.adjacencies().keys() {
+                        if !visited.contains( next_id ) {
+                            queue.push_back( next_id.clone() );
+                        }
+                    }
+                }
+                return Some( current_id );
+            }
+        }
+        None
+    }
+
+    async fn dfs_step( &'a self, stack: &mut Vec<I>, visited: &mut BTreeSet<I> ) -> Option<I> {
+        while let Some( current_id ) = stack.pop() {
+            if visited.insert( current_id.clone() ) {
+                if let Some( current_node ) = self.graph().data().get( &current_id ) {
+                    for next_id in current_node.adjacencies().keys() {
+                        if !visited.contains( next_id ) {
+                            stack.push( next_id.clone() );
+                        }
+                    }
+                }
+                return Some( current_id );
+            }
+        }
+        None
+    }
+
+    async fn bfs( &'a self, start: I ) {
+        let mut queue = VecDeque::new();
+        let mut visited = BTreeSet::new();
+        queue.push_back( start.clone() );
+        while !queue.is_empty() {
+            let _ = self.bfs_step( &mut queue, &mut visited );
+        }
+    }
+
+    async fn dfs( &'a self, start: I ) {
+        let mut stack = Vec::new();
+        let mut visited = BTreeSet::new();
+        stack.push( start.clone() );
+        while !stack.is_empty() {
+            let _ = self.dfs_step( &mut stack, &mut visited );
+        }
+    }
+
+    async fn dijkstra( &'a self, start: I, end: I ) -> Option<Vec<I>>
+    where
+        I: std::hash::Hash
+    {
+        let mut dist: HashMap<I, usize> = HashMap::new();
+        let mut heap = BinaryHeap::new();
+        let mut predecessors: HashMap<I, I> = HashMap::new();
+
+        // Initialize distances
+        dist.insert( start.clone(), 0 );
+        heap.push( ( 0, start.clone() ) );
+
+        while let Some( ( cost, position ) ) = heap.pop() {
+            if position == end {
+                // Reconstruct the path from end to start
+                let mut path = VecDeque::new();
+                let mut current = end.clone();
+                while let Some( predecessor ) = predecessors.get( &current ) {
+                    path.push_front( current.clone() );
+                    current = predecessor.clone();
+                }
+                path.push_front( start );
+                return Some( path.into_iter().collect() );
+            }
+
+            if cost > *dist.get( &position ).unwrap_or( &usize::MAX ) {
+                continue;
+            }
+
+            if let Some( current_node) = self.graph().data().get( &position ) {
+                for next_id in current_node.adjacencies().keys() {
+                    let next_cost = cost + 1;
+                    if next_cost < *dist.get( next_id ).unwrap_or( &usize::MAX ) {
+                        dist.insert( next_id.clone(), next_cost );
+                        predecessors.insert( next_id.clone(), position.clone() );
+                        heap.push( ( next_cost, next_id.clone() ) );
+                    }
+                }
+            }
+        }
+
+        None // Return None if no path is found
+    }
+}
+
 pub trait Traversable<'a, T, I, N, E>
 where
     T: GraphType,
